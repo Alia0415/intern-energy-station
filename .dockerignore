@@ -1,0 +1,13 @@
+# 构建镜像时无需进入容器的内容（含密钥：.env.local 绝不进镜像）
+node_modules
+dist
+.git
+.env
+.env.local
+.env.*.local
+*.log
+npm-debug.log*
+screenshots
+uploads
+.thumbnail
+实习能量站.html
