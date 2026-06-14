@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>成长导航 · 业务部新人成长工作台</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <template id="__bundler_thumbnail" data-bg-color="#0052D9">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect x="360" y="190" width="480" height="420" rx="36" fill="#ffffff" />
+      <rect x="408" y="250" width="150" height="22" rx="11" fill="#0052D9" />
+      <rect x="408" y="316" width="384" height="16" rx="8" fill="#C5D7FB" />
+      <rect x="408" y="360" width="320" height="16" rx="8" fill="#E5E6EB" />
+      <circle cx="430" cy="448" r="18" fill="#00924C" />
+      <path d="M422 448l6 6 12-12" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      <rect x="464" y="438" width="300" height="16" rx="8" fill="#1D2129" opacity="0.7" />
+      <circle cx="430" cy="516" r="18" fill="#D9700B" />
+      <rect x="464" y="506" width="240" height="16" rx="8" fill="#E5E6EB" />
+    </svg>
+  </template>
+
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script src="data.js"></script>
+  <script src="services/storageService.js"></script>
+  <script src="services/aiService.js"></script>
+  <script type="text/babel" src="components.jsx"></script>
+  <script type="text/babel" src="intern.jsx"></script>
+  <script type="text/babel" src="report.jsx"></script>
+  <script type="text/babel" src="mentor.jsx"></script>
+  <script type="text/babel" src="hr.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
