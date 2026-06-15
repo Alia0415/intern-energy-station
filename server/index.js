@@ -162,7 +162,41 @@ app.post("/api/ai/weekly-report", async (req, res) => {
   }
 });
 
-// 三、问企鹅 RAG —— 可信检索增强：后端「自行检索」，不信任前端传来的 matchedDocs
+// 三、日报草稿 —— 「提炼工作亮点 / 生成导师版总结」，基于真实日报，返回 { title, body }
+app.post("/api/ai/daily-draft", async (req, res) => {
+  const apiKey = requireApiKey(res);
+  if (!apiKey) return;
+  const { kind = "highlight", daily = {} } = req.body || {};
+  const isMentor = kind === "mentor";
+  const meta = isMentor
+    ? {
+        title: "导师版总结 · 智能草稿",
+        sys:
+          "你是实习生成长辅导助手。根据这份日报，为导师写一段「导师版总结」：客观描述今日表现，" +
+          "判断卡点是流程性还是能力性，给出具体可执行的带教建议，并判断当前所处阶段。" +
+          "语气中肯、就事论事；只基于日报内容、不编造。",
+      }
+    : {
+        title: "工作亮点 · 智能草稿",
+        sys:
+          "你是实习生成长辅导助手。根据这份日报，提炼 3-4 条「工作亮点」，聚焦真实成长、主动性与可迁移的能力，" +
+          "每条以「• 」开头并用 \\n 分行；只基于日报内容、不编造。",
+      };
+  try {
+    const result = await callDeepSeek(apiKey, [
+      {
+        role: "system",
+        content: meta.sys + ' 只输出 JSON：{"title":string,"body":string}。body 用简体中文。',
+      },
+      { role: "user", content: `日报数据(JSON)：${JSON.stringify(daily)}` },
+    ]);
+    res.json({ title: result.title || meta.title, body: result.body || "" });
+  } catch (err) {
+    res.status(502).json({ error: "deepseek_failed", message: String(err.message || err) });
+  }
+});
+
+// 四、问企鹅 RAG —— 可信检索增强：后端「自行检索」，不信任前端传来的 matchedDocs
 //   请求体：{ role, question }            ← 前端只传这两项
 //   · 后端用 searchKnowledgeBase(question, role) 在服务端检索，作为唯一可信上下文。
 //   · 检索为空 → 直接 no_match，不调用 DeepSeek。

@@ -228,11 +228,44 @@
     }).then((res) => res.json());
   }
 
+  // 日报「提炼工作亮点 / 生成导师版总结」—— 返回 { title, body }
+  function mockDailyDraft(kind, daily) {
+    const d = daily || {};
+    if (kind === "mentor") {
+      return {
+        title: "导师版总结 · 智能草稿",
+        body: `今日完成：${d.done || "（未填写）"}。卡点：${d.blocker || "无明显卡点"}。建议：${d.help ? "围绕「" + d.help + "」给予支持" : "保持当前节奏，按需跟进"}。`,
+      };
+    }
+    const items = [d.done, d.gain, d.blocker].filter(Boolean).map((x) => "• " + x);
+    return {
+      title: "工作亮点 · 智能草稿",
+      body: items.length ? items.join("\n") : "• （请先填写今日完成与收获，再提炼亮点）",
+    };
+  }
+
+  async function requestDailyDraft(kind, daily) {
+    if (USE_MOCK_AI) {
+      await wait(800); // 模拟处理耗时
+      return mockDailyDraft(kind, daily);
+    }
+    return fetch("/api/ai/daily-draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, daily }),
+    }).then((res) => {
+      if (!res.ok) throw new Error("api_" + res.status);
+      return res.json();
+    });
+  }
+
   window.aiService = {
     USE_MOCK_AI,
     mockTaskBreakdown,
     mockGenerateWeeklyReport,
+    mockDailyDraft,
     requestTaskBreakdown,
     requestWeeklyReport,
+    requestDailyDraft,
   };
 })();

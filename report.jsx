@@ -34,9 +34,16 @@ function DailyTab() {
     setPlanAdded(m => ({ ...m, [key]: true }));
     window.toast("已同步到今日待办", `「${key}」已转为次日待办，出现在首页「今日待办 / 本周待办」。`);
   }
-  function runGen(kind) {
+  async function runGen(kind) {
     setGenLoading(kind); setGen(null);
-    setTimeout(() => { setGenLoading(null); setGen(REPORT_GEN[kind]); }, 1100);
+    try {
+      const res = await window.aiService.requestDailyDraft(kind, daily);
+      setGen(res && res.body ? res : REPORT_GEN[kind]);
+    } catch (e) {
+      setGen(REPORT_GEN[kind]); // 调用失败兜底到本地草稿，页面不报错
+    } finally {
+      setGenLoading(null);
+    }
   }
 
   return (
