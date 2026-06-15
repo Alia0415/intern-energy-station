@@ -63,6 +63,7 @@ function DailyTab() {
     const doneList = splitLines(daily.done);
     const rec = {
       id: "d" + Date.now(),
+      menteeId: 1, name: "林之遥", // demo 当前实习生身份；带教工作台据此归并、只显示自己名下实习生的提交
       date: daily.date || "今日",
       done: doneList.length,
       undone: 0,
@@ -219,6 +220,7 @@ function WeeklyTab() {
       const idx = byId >= 0 ? byId : byWeek;
       const rec = {
         id: idx >= 0 ? next[idx].id : "wr" + Date.now(),
+        menteeId: 1, name: "林之遥", // demo 当前实习生身份；带教侧据此归并展示
         weekStart, weekEnd, period,
         summary: clean.summary || "",
         completedWork: clean.completedWork || [], keyResults: clean.keyResults || [], problems: clean.problems || [],

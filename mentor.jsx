@@ -313,7 +313,7 @@ function SubmissionDrawer({ sub, focusFeedback, onClose, onSend }) {
 }
 
 /* ===================== 抽屉：实习生详情 ===================== */
-function MenteeDrawer({ mentee, tasks, submissions, onClose, onPublish, onView }) {
+function MenteeDrawer({ mentee, tasks, submissions, dailyReports = [], weeklyReports = [], onClose, onPublish, onView }) {
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
     window.addEventListener("keydown", onKey);
@@ -365,6 +365,35 @@ function MenteeDrawer({ mentee, tasks, submissions, onClose, onPublish, onView }
               })}
             </div>
           </div>
+
+          <div>
+            <div className="sec-row" style={{ marginBottom: 10 }}><div className="task-meta-k" style={{ fontSize: 12 }}>日报 / 周报（{dailyReports.length + weeklyReports.length}）</div></div>
+            {dailyReports.length + weeklyReports.length === 0 && <div style={{ fontSize: 13, color: "var(--t4)" }}>该实习生还没有提交日报 / 周报。</div>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {weeklyReports.map(r => (
+                <div key={r.id} style={{ padding: "11px 13px", border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="chip chip-green" style={{ fontSize: 10.5, flexShrink: 0 }}>周报</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--t1)" }}>{r.period}</span>
+                  </div>
+                  <div className="card-sub" style={{ fontSize: 12, marginTop: 4, lineHeight: 1.55 }}>{r.summary || "（无总结）"}</div>
+                </div>
+              ))}
+              {dailyReports.map(r => (
+                <div key={r.id} style={{ padding: "11px 13px", border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="chip chip-blue" style={{ fontSize: 10.5, flexShrink: 0 }}>日报</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--t1)" }}>{r.date}</span>
+                    {r.detail && r.detail.mood && <span className="card-sub" style={{ fontSize: 11.5 }}>· {r.detail.mood}</span>}
+                  </div>
+                  <div className="card-sub" style={{ fontSize: 12, marginTop: 4, lineHeight: 1.55 }}>完成：{((r.detail && r.detail.doneList) || []).join("；") || "—"}</div>
+                  {r.detail && r.detail.blocker && r.detail.blocker.trim() && <div style={{ fontSize: 11.5, color: "var(--orange)", marginTop: 3 }}>卡点：{r.detail.blocker}</div>}
+                  {r.detail && r.detail.help && r.detail.help.trim() && <div style={{ fontSize: 11.5, color: "var(--t3)", marginTop: 3 }}>求助：{r.detail.help}</div>}
+                  {r.detail && r.detail.highlight && <div style={{ fontSize: 11.5, color: "var(--t3)", marginTop: 3, whiteSpace: "pre-wrap" }}>亮点：{r.detail.highlight}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="drawer-foot">
           <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => onPublish(mentee.id)}><Icon name="plus" size={14} />给 {mentee.name} 发布任务</button>
@@ -381,6 +410,8 @@ function MentorWorkbench({ tab, setTab }) {
   const [assignments, setAssignments] = usePersist("ies4_assignments", D.assignments);
   const [submissions, setSubmissions] = usePersist("ies4_submissions", D.submissions);
   const [todos, setTodos] = usePersist("ies6_todos", D.todos);
+  const [dailyReports] = usePersist("ies_dailyReports", []); // 实习生真实提交的日报
+  const [weeklyReports] = usePersist("ies_weeklyReports", []); // 实习生真实保存的周报
   const [drawer, setDrawer] = useState(null); // { type, ... }
   const TODAY = (D.daily && D.daily.date ? D.daily.date : "").split(" ")[0];
 
@@ -421,7 +452,7 @@ function MentorWorkbench({ tab, setTab }) {
       {tab === "process" && <ProcessTab submissions={submissions} onView={openSubmission} />}
 
       {liveSub && <SubmissionDrawer sub={liveSub} focusFeedback={drawer.focus} onClose={() => setDrawer(null)} onSend={sendFeedback} />}
-      {drawerMentee && <MenteeDrawer mentee={drawerMentee} tasks={assignments[drawerMentee.id] || []} submissions={submissions.filter(s => s.menteeId === drawerMentee.id)} onClose={() => setDrawer(null)} onPublish={goPublishTab} onView={openSubmission} />}
+      {drawerMentee && <MenteeDrawer mentee={drawerMentee} tasks={assignments[drawerMentee.id] || []} submissions={submissions.filter(s => s.menteeId === drawerMentee.id)} dailyReports={dailyReports.filter(r => (r.menteeId || 1) === drawerMentee.id)} weeklyReports={weeklyReports.filter(r => (r.menteeId || 1) === drawerMentee.id)} onClose={() => setDrawer(null)} onPublish={goPublishTab} onView={openSubmission} />}
     </>
   );
 }
