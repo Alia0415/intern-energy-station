@@ -186,9 +186,18 @@ app.post("/api/ai/daily-draft", async (req, res) => {
     const result = await callDeepSeek(apiKey, [
       {
         role: "system",
-        content: meta.sys + ' 只输出 JSON：{"title":string,"body":string}。body 用简体中文。',
+        content:
+          meta.sys +
+          " 严格只依据用户填写的内容作答，不得编造未提及的工作；若填写很少，就只提炼 1-2 条或简短作答。" +
+          ' 只输出 JSON：{"title":string,"body":string}。body 用简体中文。',
       },
-      { role: "user", content: `日报数据(JSON)：${JSON.stringify(daily)}` },
+      {
+        role: "user",
+        content:
+          `今日状态：${daily.mood || "未填"}\n今日完成：${daily.done || "未填"}\n` +
+          `今日小收获：${daily.gain || "未填"}\n遇到的卡点：${daily.blocker || "未填"}\n` +
+          `需要导师帮助：${daily.help || "未填"}`,
+      },
     ]);
     res.json({ title: result.title || meta.title, body: result.body || "" });
   } catch (err) {

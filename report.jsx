@@ -40,8 +40,10 @@ function DailyTab() {
   }
   async function runGen(kind) {
     setGenLoading(kind); setGen(null);
+    // 只把用户真实填写的字段交给 AI（不带 data.js 里的默认明日计划等 mock，避免“跟我写的没关系”）
+    const input = { mood: daily.mood, done: daily.done, gain: daily.gain, blocker: daily.blocker, help: daily.help };
     try {
-      const res = await window.aiService.requestDailyDraft(kind, daily);
+      const res = await window.aiService.requestDailyDraft(kind, input);
       setGen(res && res.body ? { ...res, kind } : { ...REPORT_GEN[kind], kind });
     } catch (e) {
       setGen({ ...REPORT_GEN[kind], kind }); // 调用失败兜底到本地草稿，页面不报错
