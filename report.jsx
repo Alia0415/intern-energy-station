@@ -5,6 +5,9 @@ const REPORT_GEN = {
   mentor: { title: "导师版总结 · 智能草稿", body: "林之遥今日表现稳定：独立完成埋点联调并提交评审，质量意识在线。卡点集中在「灰度发布环境权限未打通」，属流程性而非能力问题。建议：带看一次完整发布、明确对接人清单即可快速补齐。整体处于「适应与融入」阶段的健康节奏。" },
 };
 
+// 把一段文本按换行/分号/句号拆成条目（日报提交时用于统计与列表化）
+function splitLines(t) { return String(t || "").split(/[\n；;。]+/).map((s) => s.trim()).filter(Boolean); }
+
 /* ---------- 日报填写 ---------- */
 function DailyTab() {
   const D = window.APP_DATA;
@@ -13,6 +16,7 @@ function DailyTab() {
   const [gen, setGen] = useState(null);
   const [genLoading, setGenLoading] = useState(null);
   const [planAdded, setPlanAdded] = usePersist("ies3_planAdded", {});
+  const [submitted, setSubmitted] = usePersist("ies_dailyReports", []); // 真实提交的日报历史
 
   const moods = [{ k: "轻松", c: "#00924C" }, { k: "还不错", c: "#0052D9" }, { k: "有点累", c: "#D9700B" }, { k: "压力有点大", c: "#D54941" }];
   const fields = [
@@ -38,12 +42,48 @@ function DailyTab() {
     setGenLoading(kind); setGen(null);
     try {
       const res = await window.aiService.requestDailyDraft(kind, daily);
-      setGen(res && res.body ? res : REPORT_GEN[kind]);
+      setGen(res && res.body ? { ...res, kind } : { ...REPORT_GEN[kind], kind });
     } catch (e) {
-      setGen(REPORT_GEN[kind]); // 调用失败兜底到本地草稿，页面不报错
+      setGen({ ...REPORT_GEN[kind], kind }); // 调用失败兜底到本地草稿，页面不报错
     } finally {
       setGenLoading(null);
     }
+  }
+
+  // 「采用」：把生成的亮点 / 导师版总结真正存到本条日报，随提交进入历史
+  function adopt(kind, body) {
+    setDaily((d) => ({ ...d, [kind === "mentor" ? "mentorSummary" : "highlight"]: body }));
+    setGen(null);
+    window.toast("已采用", "已附到本条日报，提交后可在「历史记录」中查看。", "check");
+  }
+
+  // 「提交日报」：把当天日报真正写入历史（同一天覆盖，避免重复）
+  function submitDaily() {
+    const filled = [daily.done, daily.gain, daily.blocker, daily.help].some((x) => x && x.trim());
+    if (!filled) { window.toast("日报还是空的", "先填写今日完成 / 收获 / 卡点等内容，再提交。", "alert"); return; }
+    const doneList = splitLines(daily.done);
+    const rec = {
+      id: "d" + Date.now(),
+      date: daily.date || "今日",
+      done: doneList.length,
+      undone: 0,
+      blockers: daily.blocker && daily.blocker.trim() ? 1 : 0,
+      feedback: "未反馈",
+      linkedTodos: 0,
+      detail: {
+        mood: daily.mood || "",
+        doneList: doneList.length ? doneList : ["（未填写）"],
+        gain: daily.gain || "",
+        blocker: daily.blocker || "",
+        help: daily.help || "",
+        mentorFeedback: "",
+        todos: [],
+        highlight: daily.highlight || "",
+        mentorSummary: daily.mentorSummary || "",
+      },
+    };
+    setSubmitted((list) => [rec, ...list.filter((r) => r.date !== rec.date)]);
+    window.toast("日报已提交", "今日日报已保存到「历史记录 · 日报记录」，可随时回看。", "send");
   }
 
   return (
@@ -77,7 +117,7 @@ function DailyTab() {
         <button className="btn btn-ghost btn-sm" onClick={() => window.toast("草稿已保存", "日报草稿已保存，刷新页面也会保留。")}><Icon name="check" size={13} />保存草稿</button>
         <button className="btn btn-soft btn-sm" onClick={() => runGen("highlight")} disabled={!!genLoading}><Icon name="light" size={13} />提炼工作亮点</button>
         <button className="btn btn-soft btn-sm" onClick={() => runGen("mentor")} disabled={!!genLoading}><Icon name="mentor" size={13} />生成导师版总结</button>
-        <button className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }} onClick={() => window.toast("日报已提交", "今日日报已同步导师陈骁，并沉淀到你的成长档案。")}><Icon name="send" size={13} />提交日报</button>
+        <button className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }} onClick={submitDaily}><Icon name="send" size={13} />提交日报</button>
       </div>
 
       {/* 生成结果（仅点击后出现） */}
@@ -92,7 +132,7 @@ function DailyTab() {
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
                 <span className="chip chip-blue">智能草稿</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "var(--t1)" }}>{gen.title}</span>
-                <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => { window.toast("已采用", "已应用到当前日报。"); setGen(null); }}>采用</button>
+                <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => adopt(gen.kind, gen.body)}>采用</button>
                 <button className="icon-btn" style={{ width: 30, height: 30, border: "none", background: "transparent" }} onClick={() => setGen(null)}><Icon name="x" size={14} /></button>
               </div>
               <div className="bubble bubble-ai" style={{ maxWidth: "100%" }}>{gen.body}</div>
@@ -341,6 +381,8 @@ function HistoryDetail({ record, onClose }) {
               <DetailGroup title="关联待办">
                 <div className="hd-tags">{d.todos.map((x, i) => <span className="hd-tag" key={i}><Icon name="check" size={12} color="var(--blue)" />{x}</span>)}</div>
               </DetailGroup>
+              {d.highlight && <DetailGroup title="工作亮点（已采用）"><p className="hd-p" style={{ whiteSpace: "pre-wrap" }}>{d.highlight}</p></DetailGroup>}
+              {d.mentorSummary && <DetailGroup title="导师版总结（已采用）"><p className="hd-p" style={{ whiteSpace: "pre-wrap" }}>{d.mentorSummary}</p></DetailGroup>}
             </>
           ) : (
             <>
@@ -417,10 +459,36 @@ function WeeklyHistoryTable({ data, onView }) {
 }
 
 /* ---------- 历史记录 ---------- */
+// 把「周报生成」里保存的周报映射成历史表格 / 详情需要的结构
+function weeklyToHistoryRow(r) {
+  const first = (a) => (Array.isArray(a) && a.length ? a[0] : "—");
+  return {
+    period: r.period,
+    done: (r.completedWork || []).length,
+    gain: first(r.learning),
+    problem: first(r.problems),
+    nextPlan: first(r.nextWeekPlan),
+    feedback: "未反馈",
+    detail: {
+      keyTasks: r.keyResults || [],
+      doneList: r.completedWork || [],
+      gain: (r.learning && r.learning.length) ? r.learning : [r.summary || "—"],
+      problem: (r.problems && r.problems.length) ? r.problems : ["—"],
+      nextPlan: (r.nextWeekPlan && r.nextWeekPlan.length) ? r.nextWeekPlan : ["—"],
+      mentorFeedback: "",
+    },
+  };
+}
+
 function HistoryTab() {
   const D = window.APP_DATA;
   const [sub, setSub] = useState("daily");
   const [detail, setDetail] = useState(null);
+  const [myDailies] = usePersist("ies_dailyReports", []);
+  const [myWeeklies] = usePersist("ies_weeklyReports", []);
+  // 真实提交/保存的记录排在前，demo 历史在后
+  const dailyData = [...myDailies, ...D.dailyHistory];
+  const weeklyData = [...myWeeklies.map(weeklyToHistoryRow), ...D.weeklyHistory];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div className="seg" style={{ alignSelf: "flex-start" }}>
@@ -433,8 +501,8 @@ function HistoryTab() {
           : "按周查看阶段性总结、问题复盘和下周计划，帮助沉淀持续成长记录。"}
       </div>
       {sub === "daily"
-        ? <DailyHistoryTable data={D.dailyHistory} onView={r => setDetail({ kind: "daily", data: r })} />
-        : <WeeklyHistoryTable data={D.weeklyHistory} onView={r => setDetail({ kind: "weekly", data: r })} />}
+        ? <DailyHistoryTable data={dailyData} onView={r => setDetail({ kind: "daily", data: r })} />
+        : <WeeklyHistoryTable data={weeklyData} onView={r => setDetail({ kind: "weekly", data: r })} />}
       <HistoryDetail record={detail} onClose={() => setDetail(null)} />
     </div>
   );
