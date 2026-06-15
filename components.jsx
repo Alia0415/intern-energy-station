@@ -381,7 +381,7 @@ function buildSearchIndex(role) {
   } else {
     D.overviewTasks.forEach(t => idx.push({ type: "待处理", label: t.issue, sub: t.basis, tab: "overview" }));
     D.hotIssues.forEach(it => idx.push({ type: "高频问题", label: it.name, sub: it.type + " · " + it.basis, tab: "issues" }));
-    D.hrTasks.forEach(t => idx.push({ type: "待处理", label: t.title, sub: t.target + " · " + t.reason, tab: "issues" }));
+    D.hrTasks.forEach(t => idx.push({ type: "待处理", label: t.reason, sub: t.source + " · " + t.target, tab: "issues" }));
     D.fitObservations.forEach(o => idx.push({ type: "岗位适配", label: o.name, sub: o.post + " · " + o.state, tab: "fit" }));
   }
   return idx;
