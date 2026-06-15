@@ -13,8 +13,7 @@ function DailyTab() {
   const D = window.APP_DATA;
   const [daily, setDaily] = usePersist("ies3_daily2", D.daily);
   const [todos, setTodos] = usePersist("ies6_todos", D.todos);
-  const [gen, setGen] = useState(null);
-  const [genLoading, setGenLoading] = useState(null);
+  const [genLoading, setGenLoading] = useState(false);
   const [planAdded, setPlanAdded] = usePersist("ies3_planAdded", {});
   const [submitted, setSubmitted] = usePersist("ies_dailyReports", []); // 真实提交的日报历史
 
@@ -38,25 +37,23 @@ function DailyTab() {
     setPlanAdded(m => ({ ...m, [key]: true }));
     window.toast("已同步到今日待办", `「${key}」已转为次日待办，出现在首页「今日待办 / 本周待办」。`);
   }
-  async function runGen(kind) {
-    setGenLoading(kind); setGen(null);
-    // 只把用户真实填写的字段交给 AI（不带 data.js 里的默认明日计划等 mock，避免“跟我写的没关系”）
+  // 「提炼工作亮点」：只把用户真实填写的字段交给 AI 生成草稿，写入「可编辑」的 daily.highlight
+  async function genHighlight() {
+    if (genLoading) return;
     const input = { mood: daily.mood, done: daily.done, gain: daily.gain, blocker: daily.blocker, help: daily.help };
-    try {
-      const res = await window.aiService.requestDailyDraft(kind, input);
-      setGen(res && res.body ? { ...res, kind } : { ...REPORT_GEN[kind], kind });
-    } catch (e) {
-      setGen({ ...REPORT_GEN[kind], kind }); // 调用失败兜底到本地草稿，页面不报错
-    } finally {
-      setGenLoading(null);
+    if (![input.done, input.gain, input.blocker, input.help].some((x) => x && x.trim())) {
+      window.toast("先填几句", "先写下今日完成 / 收获等内容，再让 AI 帮你提炼。", "alert");
+      return;
     }
-  }
-
-  // 「采用」：把生成的亮点 / 导师版总结真正存到本条日报，随提交进入历史
-  function adopt(kind, body) {
-    setDaily((d) => ({ ...d, [kind === "mentor" ? "mentorSummary" : "highlight"]: body }));
-    setGen(null);
-    window.toast("已采用", "已附到本条日报，提交后可在「历史记录」中查看。", "check");
+    setGenLoading(true);
+    try {
+      const res = await window.aiService.requestDailyDraft("highlight", input);
+      setDaily((d) => ({ ...d, highlight: (res && res.body) || REPORT_GEN.highlight.body }));
+    } catch (e) {
+      setDaily((d) => ({ ...d, highlight: REPORT_GEN.highlight.body })); // 失败兜底，页面不报错
+    } finally {
+      setGenLoading(false);
+    }
   }
 
   // 「提交日报」：把当天日报真正写入历史（同一天覆盖，避免重复）
@@ -81,7 +78,6 @@ function DailyTab() {
         mentorFeedback: "",
         todos: [],
         highlight: daily.highlight || "",
-        mentorSummary: daily.mentorSummary || "",
       },
     };
     setSubmitted((list) => [rec, ...list.filter((r) => r.date !== rec.date)]);
@@ -117,28 +113,29 @@ function DailyTab() {
       {/* 底部按钮 */}
       <div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center" }}>
         <button className="btn btn-ghost btn-sm" onClick={() => window.toast("草稿已保存", "日报草稿已保存，刷新页面也会保留。")}><Icon name="check" size={13} />保存草稿</button>
-        <button className="btn btn-soft btn-sm" onClick={() => runGen("highlight")} disabled={!!genLoading}><Icon name="light" size={13} />提炼工作亮点</button>
-        <button className="btn btn-soft btn-sm" onClick={() => runGen("mentor")} disabled={!!genLoading}><Icon name="mentor" size={13} />生成导师版总结</button>
+        <button className="btn btn-soft btn-sm" onClick={genHighlight} disabled={genLoading}><Icon name="light" size={13} />{daily.highlight ? "重新提炼工作亮点" : "AI 提炼工作亮点"}</button>
         <button className="btn btn-primary btn-sm" style={{ marginLeft: "auto" }} onClick={submitDaily}><Icon name="send" size={13} />提交日报</button>
       </div>
 
-      {/* 生成结果（仅点击后出现） */}
-      {(genLoading || gen) && (
+      {/* 工作亮点 · AI 生成 + 可编辑 */}
+      {(genLoading || daily.highlight) && (
         <div className="card card-pad" style={{ background: "var(--surface-2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+            <span className="chip chip-blue">AI 智能草稿</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--t1)" }}>工作亮点 · 可编辑</span>
+            {!genLoading && daily.highlight && (
+              <button className="icon-btn" style={{ marginLeft: "auto", width: 30, height: 30, border: "none", background: "transparent" }} onClick={() => set("highlight", "")} title="清空"><Icon name="x" size={14} /></button>
+            )}
+          </div>
           {genLoading ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--blue)", fontSize: 13 }}>
-              <span className="typing"><span></span><span></span><span></span></span> 正在基于你的日报整理…
+              <span className="typing"><span></span><span></span><span></span></span> 正在根据你填写的内容提炼…
             </div>
           ) : (
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
-                <span className="chip chip-blue">智能草稿</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--t1)" }}>{gen.title}</span>
-                <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => adopt(gen.kind, gen.body)}>采用</button>
-                <button className="icon-btn" style={{ width: 30, height: 30, border: "none", background: "transparent" }} onClick={() => setGen(null)}><Icon name="x" size={14} /></button>
-              </div>
-              <div className="bubble bubble-ai" style={{ maxWidth: "100%" }}>{gen.body}</div>
-            </div>
+            <>
+              <textarea className="field" style={{ minHeight: 100 }} value={daily.highlight || ""} onChange={e => set("highlight", e.target.value)} />
+              <div style={{ fontSize: 12, color: "var(--t4)", marginTop: 6 }}>可直接修改；点「提交日报」会随日报一起保存到「历史记录」。</div>
+            </>
           )}
         </div>
       )}
@@ -383,8 +380,7 @@ function HistoryDetail({ record, onClose }) {
               <DetailGroup title="关联待办">
                 <div className="hd-tags">{d.todos.map((x, i) => <span className="hd-tag" key={i}><Icon name="check" size={12} color="var(--blue)" />{x}</span>)}</div>
               </DetailGroup>
-              {d.highlight && <DetailGroup title="工作亮点（已采用）"><p className="hd-p" style={{ whiteSpace: "pre-wrap" }}>{d.highlight}</p></DetailGroup>}
-              {d.mentorSummary && <DetailGroup title="导师版总结（已采用）"><p className="hd-p" style={{ whiteSpace: "pre-wrap" }}>{d.mentorSummary}</p></DetailGroup>}
+              {d.highlight && <DetailGroup title="工作亮点"><p className="hd-p" style={{ whiteSpace: "pre-wrap" }}>{d.highlight}</p></DetailGroup>}
             </>
           ) : (
             <>
