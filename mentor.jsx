@@ -370,8 +370,8 @@ function MenteeDrawer({ mentee, tasks, submissions, dailyReports = [], weeklyRep
             <div className="sec-row" style={{ marginBottom: 10 }}><div className="task-meta-k" style={{ fontSize: 12 }}>日报 / 周报（{dailyReports.length + weeklyReports.length}）</div></div>
             {dailyReports.length + weeklyReports.length === 0 && <div style={{ fontSize: 13, color: "var(--t4)" }}>该实习生还没有提交日报 / 周报。</div>}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {weeklyReports.map(r => (
-                <div key={r.id} style={{ padding: "11px 13px", border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+              {weeklyReports.map((r, i) => (
+                <div key={r.id || ("mw-" + i)} style={{ padding: "11px 13px", border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span className="chip chip-green" style={{ fontSize: 10.5, flexShrink: 0 }}>周报</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "var(--t1)" }}>{r.period}</span>
@@ -379,8 +379,8 @@ function MenteeDrawer({ mentee, tasks, submissions, dailyReports = [], weeklyRep
                   <div className="card-sub" style={{ fontSize: 12, marginTop: 4, lineHeight: 1.55 }}>{r.summary || "（无总结）"}</div>
                 </div>
               ))}
-              {dailyReports.map(r => (
-                <div key={r.id} style={{ padding: "11px 13px", border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+              {dailyReports.map((r, i) => (
+                <div key={r.id || ("md-" + i)} style={{ padding: "11px 13px", border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span className="chip chip-blue" style={{ fontSize: 10.5, flexShrink: 0 }}>日报</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "var(--t1)" }}>{r.date}</span>
@@ -452,7 +452,7 @@ function MentorWorkbench({ tab, setTab }) {
       {tab === "process" && <ProcessTab submissions={submissions} onView={openSubmission} />}
 
       {liveSub && <SubmissionDrawer sub={liveSub} focusFeedback={drawer.focus} onClose={() => setDrawer(null)} onSend={sendFeedback} />}
-      {drawerMentee && <MenteeDrawer mentee={drawerMentee} tasks={assignments[drawerMentee.id] || []} submissions={submissions.filter(s => s.menteeId === drawerMentee.id)} dailyReports={dailyReports.filter(r => (r.menteeId || 1) === drawerMentee.id)} weeklyReports={weeklyReports.filter(r => (r.menteeId || 1) === drawerMentee.id)} onClose={() => setDrawer(null)} onPublish={goPublishTab} onView={openSubmission} />}
+      {drawerMentee && <MenteeDrawer mentee={drawerMentee} tasks={assignments[drawerMentee.id] || []} submissions={submissions.filter(s => s.menteeId === drawerMentee.id)} dailyReports={[...dailyReports.filter(r => (r.menteeId || 1) === drawerMentee.id), ...(drawerMentee.id === 1 ? D.dailyHistory : [])]} weeklyReports={[...weeklyReports.filter(r => (r.menteeId || 1) === drawerMentee.id), ...(drawerMentee.id === 1 ? D.weeklyHistory.map(w => ({ ...w, summary: w.summary || (w.detail && w.detail.gain && w.detail.gain[0]) || "" })) : [])]} onClose={() => setDrawer(null)} onPublish={goPublishTab} onView={openSubmission} />}
     </>
   );
 }

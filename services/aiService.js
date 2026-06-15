@@ -212,7 +212,7 @@
         priority: task.priority || "normal",
         currentTodoList: task.currentTodoList || [],
       }),
-    }).then((res) => res.json());
+    }).then((res) => { if (!res.ok) throw new Error("api_" + res.status); return res.json(); });
   }
 
   async function requestWeeklyReport(dailyReports, weekRange) {
@@ -225,7 +225,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ weekRange, dailyReports }),
-    }).then((res) => res.json());
+    }).then((res) => { if (!res.ok) throw new Error("api_" + res.status); return res.json(); });
   }
 
   // 日报「提炼工作亮点 / 生成导师版总结」—— 返回 { title, body }

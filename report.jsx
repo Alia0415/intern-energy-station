@@ -48,9 +48,11 @@ function DailyTab() {
     setGenLoading(true);
     try {
       const res = await window.aiService.requestDailyDraft("highlight", input);
-      setDaily((d) => ({ ...d, highlight: (res && res.body) || REPORT_GEN.highlight.body }));
+      if (res && res.body) setDaily((d) => ({ ...d, highlight: res.body }));
+      else window.toast("没生成出内容", "AI 这次没返回内容，请稍后重试，或直接手动写工作亮点。", "alert");
     } catch (e) {
-      setDaily((d) => ({ ...d, highlight: REPORT_GEN.highlight.body })); // 失败兜底，页面不报错
+      // 不静默回填写死模板（避免把无关固定文案冒充 AI 结果），如实提示
+      window.toast("AI 暂时不可用", "提炼失败，请稍后重试，或直接手动写工作亮点。", "alert");
     } finally {
       setGenLoading(false);
     }

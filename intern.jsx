@@ -318,7 +318,7 @@ function InternToday({ setTab }) {
       window.toast("已恢复进行", "任务已回到进行中。");
     } else {
       setTodos(ts => ts.map(t => t.id === id ? { ...t, status: "stuck", ack: null } : t));
-      window.toast("已标记卡住", "已温和同步导师陈骁，并生成一条待跟进事项——卡住不是问题，及时说出来就好。", "alert");
+      window.toast("已标记卡住", "记得在日报里写明卡点，并主动同步导师陈骁——卡住不是问题，及时说出来就好。", "alert");
     }
   }
   function requestConfirm(id) {
@@ -326,7 +326,7 @@ function InternToday({ setTab }) {
     window.toast("已请求导师确认", "已把验收标准发给导师陈骁，等待 TA 确认。", "chat");
     setTimeout(() => {
       setTodos(ts => ts.map(t => (t.id === id && t.ack === "pending") ? { ...t, ack: "confirmed" } : t));
-      window.toast("导师已确认", "导师陈骁确认了这条任务，已记入你的成长记录。", "check");
+      window.toast("导师已确认（演示）", "演示环境模拟导师确认并记入成长记录；真实环境由导师在带教端操作。", "check");
     }, 2600);
   }
   function add(t) { setTodos(ts => [t.scope === "today" ? { ...t, sortOrder: Date.now() } : t, ...ts]); }
